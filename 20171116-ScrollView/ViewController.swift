@@ -9,7 +9,11 @@
 import UIKit
 
 class ViewController: UIViewController, UIGestureRecognizerDelegate {
-    
+
+    var currentImageView = UIImageView()
+    var pinchStartImageView = UIImageView()
+    var pinchCenter = CGPoint()
+
     @IBOutlet weak var imageView: UIImageView!
     
     override func viewDidLoad() {
@@ -48,6 +52,8 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
         let point: CGPoint = gesture.translation(in: imageView)
         let movedPoint = CGPoint(x: imageView.center.x + point.x,
                                  y: imageView.center.y + point.y)
+        print("pan: \(point.x) , \(point.y)")
+        
         imageView.center = movedPoint
         
         imageView.transform = transform
@@ -56,12 +62,8 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
     }
     
     @objc func pinchAction(_ gesture:UIPinchGestureRecognizer) {
-        print("pinch")
-        var currentImageView = UIImageView()
-        var pinchStartImageView = UIImageView()
-        var pinchCenter = CGPoint()
         if gesture.state == UIGestureRecognizerState.began {
-            var currentImageView.transform = imageView.transform
+            currentImageView.transform = imageView.transform
             
             // 開始時点の画像の中心点を保存
             pinchStartImageView.center = imageView.center
@@ -73,17 +75,20 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
             // 指の中間点を求め保存
             pinchCenter = CGPoint.init(x: (touchPoint1.x + touchPoint2.x)/2,
                                        y: (touchPoint1.y + touchPoint2.y)/2)
+            
+            
+            print("pinch start: x\(pinchStartImageView.center.x) , y\(pinchStartImageView.center.y) \n 1\(touchPoint1) , 2\(touchPoint2) \n pC.x \(pinchCenter.x) pC.y \(pinchCenter.y)")
         } else if gesture.state == UIGestureRecognizerState.changed {
             let scale = gesture.scale
             
-            let newCenter = CGPoint(x: ((pinchCenter.x - pinchStartImageView.center.x) * scale - (pinchCenter.x - pinchStartImageView.center.x)),
-                                    y: ((pinchCenter.y - pinchStartImageView.center.y) * scale - (pinchCenter.y - pinchStartImageView.center.y)))
+            let newCenter = CGPoint(x: pinchStartImageView.center.x - ((pinchCenter.x - pinchStartImageView.center.x) * scale - (pinchCenter.x - pinchStartImageView.center.x)),
+                                    y: pinchStartImageView.center.y - ((pinchCenter.y - pinchStartImageView.center.y) * scale - (pinchCenter.y - pinchStartImageView.center.y)))
             
             imageView.center = newCenter
-            
             let affine1 = currentImageView.transform
             let affine2 = CGAffineTransform.init(scaleX: scale, y: scale)
             imageView.transform = affine1.concatenating(affine2)
+
         } else if gesture.state == UIGestureRecognizerState.ended {
             let currentScale = sqrt(abs(imageView.transform.a * imageView.transform.d - imageView.transform.b * imageView.transform.c))
             if currentScale < 1.0 {
