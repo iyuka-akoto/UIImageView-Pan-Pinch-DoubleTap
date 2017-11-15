@@ -9,7 +9,7 @@
 import UIKit
 
 class ViewController: UIViewController, UIGestureRecognizerDelegate {
-
+    
     @IBOutlet weak var imageView: UIImageView!
     
     override func viewDidLoad() {
@@ -31,9 +31,13 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
         panGesture.minimumNumberOfTouches = 1
         panGesture.maximumNumberOfTouches = 2
         imageView.addGestureRecognizer(panGesture)
+        
+        let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchAction(_:)))
+        pinchGesture.delegate = self
+        imageView.addGestureRecognizer(pinchGesture)
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    func gestureRecognizer(ssgestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
     
@@ -49,7 +53,49 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
         imageView.transform = transform
         
         gesture.setTranslation(CGPoint.zero, in: imageView)
-        
+    }
+    
+    @objc func pinchAction(_ gesture:UIPinchGestureRecognizer) {
+        print("pinch")
+        var currentImageView = UIImageView()
+        var pinchStartImageView = UIImageView()
+        var pinchCenter = CGPoint()
+        if gesture.state == UIGestureRecognizerState.began {
+            var currentImageView.transform = imageView.transform
+            
+            // 開始時点の画像の中心点を保存
+            pinchStartImageView.center = imageView.center
+            
+            // ２本の指の接点を保存
+            let touchPoint1 = gesture.location(ofTouch: 0, in: imageView)
+            let touchPoint2 = gesture.location(ofTouch: 1, in: imageView)
+            
+            // 指の中間点を求め保存
+            pinchCenter = CGPoint.init(x: (touchPoint1.x + touchPoint2.x)/2,
+                                       y: (touchPoint1.y + touchPoint2.y)/2)
+        } else if gesture.state == UIGestureRecognizerState.changed {
+            let scale = gesture.scale
+            
+            let newCenter = CGPoint(x: ((pinchCenter.x - pinchStartImageView.center.x) * scale - (pinchCenter.x - pinchStartImageView.center.x)),
+                                    y: ((pinchCenter.y - pinchStartImageView.center.y) * scale - (pinchCenter.y - pinchStartImageView.center.y)))
+            
+            imageView.center = newCenter
+            
+            let affine1 = currentImageView.transform
+            let affine2 = CGAffineTransform.init(scaleX: scale, y: scale)
+            imageView.transform = affine1.concatenating(affine2)
+        } else if gesture.state == UIGestureRecognizerState.ended {
+            let currentScale = sqrt(abs(imageView.transform.a * imageView.transform.d - imageView.transform.b * imageView.transform.c))
+            if currentScale < 1.0 {
+                UIView.animate(withDuration: 0.2, animations: { () -> Void in
+                    
+                    self.imageView.center = CGPoint(x: (self.imageView.frame.size.width / 2),
+                                                    y: (self.imageView.frame.size.height / 2))
+                    self.imageView.transform = CGAffineTransform.init(scaleX: 1.0, y: 1.0)
+                }, completion: {(finished: Bool) -> Void in
+                })
+            }
+        }
     }
     
     override func didReceiveMemoryWarning() {
