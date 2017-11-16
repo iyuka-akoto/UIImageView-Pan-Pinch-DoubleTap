@@ -13,6 +13,7 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
     var currentImageView = UIImageView()
     var pinchStartImageView = UIImageView()
     var pinchCenter = CGPoint()
+    let maxScale:CGFloat = 8.0
 
     @IBOutlet weak var imageView: UIImageView!
     
@@ -39,6 +40,10 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
         let pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(self.pinchAction(_:)))
         pinchGesture.delegate = self
         imageView.addGestureRecognizer(pinchGesture)
+        
+        let doubleTapGesture = UITapGestureRecognizer(target: self, action: #selector(self.doubleTapAction(_:)))
+        doubleTapGesture.numberOfTapsRequired = 2
+        imageView.addGestureRecognizer(doubleTapGesture)
     }
     
     func gestureRecognizer(ssgestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -77,9 +82,10 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
                                        y: (touchPoint1.y + touchPoint2.y)/2)
             
             
-            print("pinch start: x\(pinchStartImageView.center.x) , y\(pinchStartImageView.center.y) \n 1\(touchPoint1) , 2\(touchPoint2) \n pC.x \(pinchCenter.x) pC.y \(pinchCenter.y)")
+            //print("pinch start: x\(pinchStartImageView.center.x) , y\(pinchStartImageView.center.y) \n 1\(touchPoint1) , 2\(touchPoint2) \n pC.x \(pinchCenter.x) pC.y \(pinchCenter.y)")
         } else if gesture.state == UIGestureRecognizerState.changed {
             let scale = gesture.scale
+            print(scale)
             
             let newCenter = CGPoint(x: pinchStartImageView.center.x - ((pinchCenter.x - pinchStartImageView.center.x) * scale - (pinchCenter.x - pinchStartImageView.center.x)),
                                     y: pinchStartImageView.center.y - ((pinchCenter.y - pinchStartImageView.center.y) * scale - (pinchCenter.y - pinchStartImageView.center.y)))
@@ -98,6 +104,42 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate {
                                                     y: (self.imageView.frame.size.height / 2))
                     self.imageView.transform = CGAffineTransform.init(scaleX: 1.0, y: 1.0)
                 }, completion: {(finished: Bool) -> Void in
+                })
+            }
+        }
+    }
+    
+    @objc func doubleTapAction(_ gesture: UITapGestureRecognizer) {
+        print("doubleTapAction")
+        if gesture.state == UIGestureRecognizerState.ended {
+            currentImageView.transform = imageView.transform
+            var doubleTapStartCenter = imageView.center
+            
+            var transform: CGAffineTransform! = nil
+            // DoubleTapで現在の2倍へ
+            var scale: CGFloat = 2.0
+            
+            let currentScale = sqrt(abs(imageView.transform.a * imageView.transform.d - imageView.transform.b * imageView.transform.c))
+            let tapPoint = gesture.location(in: imageView)
+            var newCenter: CGPoint
+            
+            if currentScale * scale > maxScale {
+                scale = 1
+                transform = CGAffineTransform.identity
+                
+                newCenter = CGPoint.init(x: imageView.frame.size.width / 2, y: imageView.frame.size.height / 2)
+                doubleTapStartCenter = newCenter
+            } else {
+                let affine1 = currentImageView.transform
+                let affine2 = CGAffineTransform.init(scaleX: scale, y: scale)
+                transform = affine1.concatenating(affine2)
+                
+                newCenter = CGPoint.init(x: doubleTapStartCenter.x - ((tapPoint.x - doubleTapStartCenter.x) * scale -           (tapPoint.x - doubleTapStartCenter.x)),
+                                         y: doubleTapStartCenter.y - ((tapPoint.y - doubleTapStartCenter.y) * scale - (tapPoint.y - doubleTapStartCenter.y)))
+                UIView.animate(withDuration: 0.3, animations: {() -> Void in
+                    self.imageView.center = newCenter
+                    self.imageView.transform = transform
+                    }, completion: {(finished:Bool) -> Void in
                 })
             }
         }
